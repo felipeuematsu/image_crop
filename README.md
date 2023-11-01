@@ -21,7 +21,7 @@ Contains all the changes needed in order to work with the `insta_assets_picker` 
 - [#104](https://github.com/lykhonis/image_crop/pull/104): add to support to Flutter 3.10.x
 - [f34bfef](https://github.com/LeGoffMael/image_crop/commit/f34bfef5eaf7aef298c475fd1a1874adaa6bcad3): fix issue on aspect ratio change, no PR made because it might not be the best fix
 - [8fb0bc0](https://github.com/LeGoffMael/image_crop/commit/8fb0bc04696f95055be5f3dc32cbb8714b278a9c): fix issue with GIF, no PR for this yet since it is specific to GIF extended image provider
-- 
+- [6200e76](https://github.com/FelipeOFF/image_crop/commit/ab81b442545071f4064b53966ecddfe93d86ed1e): Create a custom Painter for circle grid crop
 
 ## Note
 
