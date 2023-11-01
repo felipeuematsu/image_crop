@@ -55,6 +55,12 @@ class Crop extends StatefulWidget {
   /// To initialize the crop view with data programmatically
   final CropInternal? initialParam;
 
+  /// Draw circle or rectangle crop area
+  final bool isToDrawRectGrid;
+
+  /// Custom Painter for drawing the crop area
+  final CustomPainter? customPainter;
+
   const Crop({
     Key? key,
     required this.image,
@@ -67,6 +73,8 @@ class Crop extends StatefulWidget {
     this.placeholderWidget,
     this.onLoading,
     this.initialParam,
+    this.isToDrawRectGrid = true,
+    this.customPainter,
   }) : super(key: key);
 
   Crop.file(
@@ -82,6 +90,8 @@ class Crop extends StatefulWidget {
     this.placeholderWidget,
     this.onLoading,
     this.initialParam,
+    this.isToDrawRectGrid = true,
+    this.customPainter,
   })  : image = FileImage(file, scale: scale),
         super(key: key);
 
@@ -99,6 +109,8 @@ class Crop extends StatefulWidget {
     this.placeholderWidget,
     this.onLoading,
     this.initialParam,
+    this.isToDrawRectGrid = true,
+    this.customPainter,
   })  : image = AssetImage(assetName, bundle: bundle, package: package),
         super(key: key);
 
@@ -256,17 +268,30 @@ class CropState extends State<Crop> with TickerProviderStateMixin {
             child: _image == null && widget.placeholderWidget != null
                 ? widget.placeholderWidget
                 : CustomPaint(
-                    painter: _CropPainter(
-                      image: _image,
-                      ratio: _ratio,
-                      view: _view,
-                      area: _area,
-                      scale: _scale,
-                      active: _activeController.value,
-                      backgroundColor: widget.backgroundColor,
-                      disableResize: widget.disableResize,
-                      cropHandleSize: cropHandleSize,
-                    ),
+                    painter: widget.customPainter ??
+                        (widget.isToDrawRectGrid
+                            ? _CropRectPainter(
+                                image: _image,
+                                ratio: _ratio,
+                                view: _view,
+                                area: _area,
+                                scale: _scale,
+                                active: _activeController.value,
+                                backgroundColor: widget.backgroundColor,
+                                disableResize: widget.disableResize,
+                                cropHandleSize: cropHandleSize,
+                              )
+                            : _CropCirclePainter(
+                                image: _image,
+                                ratio: _ratio,
+                                view: _view,
+                                area: _area,
+                                scale: _scale,
+                                active: _activeController.value,
+                                backgroundColor: widget.backgroundColor,
+                                disableResize: widget.disableResize,
+                                cropHandleSize: cropHandleSize,
+                              )),
                   ),
           ),
         ),
@@ -730,7 +755,7 @@ class CropState extends State<Crop> with TickerProviderStateMixin {
   }
 }
 
-class _CropPainter extends CustomPainter {
+class _CropCirclePainter extends CustomPainter {
   final ui.Image? image;
   final Rect view;
   final double ratio;
@@ -741,7 +766,7 @@ class _CropPainter extends CustomPainter {
   final bool disableResize;
   final double cropHandleSize;
 
-  _CropPainter({
+  _CropCirclePainter({
     required this.image,
     required this.view,
     required this.ratio,
@@ -754,7 +779,7 @@ class _CropPainter extends CustomPainter {
   });
 
   @override
-  bool shouldRepaint(_CropPainter oldDelegate) {
+  bool shouldRepaint(_CropCirclePainter oldDelegate) {
     return oldDelegate.image != image ||
         oldDelegate.view != view ||
         oldDelegate.ratio != ratio ||
@@ -807,26 +832,16 @@ class _CropPainter extends CustomPainter {
       rect.width * area.width,
       rect.height * area.height,
     );
-    canvas.drawRect(Rect.fromLTRB(0.0, 0.0, rect.width, boundaries.top), paint);
-    canvas.drawRect(
-        Rect.fromLTRB(0.0, boundaries.bottom, rect.width, rect.height), paint);
-    canvas.drawRect(
-        Rect.fromLTRB(0.0, boundaries.top, boundaries.left, boundaries.bottom),
-        paint);
-    canvas.drawRect(
-        Rect.fromLTRB(
-            boundaries.right, boundaries.top, rect.width, boundaries.bottom),
-        paint);
 
     if (boundaries.isEmpty == false) {
-      _drawGrid(canvas, boundaries);
-      _drawHandles(canvas, boundaries);
+      _drawGrid(canvas, boundaries, rect);
+      _drawHandles(canvas, boundaries, rect);
     }
 
     canvas.restore();
   }
 
-  void _drawHandles(Canvas canvas, Rect boundaries) {
+  void _drawHandles(Canvas canvas, Rect boundaries, Rect rect) {
     final paint = Paint()
       ..isAntiAlias = true
       ..color = _kCropHandleColor;
@@ -875,21 +890,19 @@ class _CropPainter extends CustomPainter {
     );
   }
 
-  void _drawGrid(Canvas canvas, Rect boundaries) {
+  void _drawGrid(Canvas canvas, Rect boundaries, Rect rect) {
     if (active == 0.0) return;
-
+    final paintBackground = Paint()
+      ..color = backgroundColor.withOpacity(
+          _kCropOverlayActiveOpacity * active +
+              backgroundColor.opacity * (1.0 - active));
     final paint = Paint()
       ..isAntiAlias = false
       ..color = _kCropGridColor.withOpacity(_kCropGridColor.opacity * active)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
-    final path = Path()
-      ..moveTo(boundaries.left, boundaries.top)
-      ..lineTo(boundaries.right, boundaries.top)
-      ..lineTo(boundaries.right, boundaries.bottom)
-      ..lineTo(boundaries.left, boundaries.bottom)
-      ..lineTo(boundaries.left, boundaries.top);
+    final path = Path();
 
     for (var column = 1; column < _kCropGridColumnCount; column++) {
       path
@@ -909,6 +922,217 @@ class _CropPainter extends CustomPainter {
             boundaries.top + row * boundaries.height / _kCropGridRowCount);
     }
 
+    // Calc circle
+    final double radius = boundaries.width / 2;
+    final Offset center =
+        Offset(boundaries.left + radius, boundaries.top + radius);
+
+    canvas.save();
+    canvas.clipRRect(
+        RRect.fromRectAndRadius(boundaries, Radius.circular(radius)));
     canvas.drawPath(path, paint);
+    canvas.restore();
+    canvas.drawCircle(center, radius, paint);
+
+    canvas.save();
+    final Path centerCircle = Path()
+      ..addOval(
+        Rect.fromCircle(
+          center: center,
+          radius: radius,
+        ),
+      )
+      ..addRect(rect)
+      ..fillType = PathFillType.evenOdd;
+    canvas.drawPath(centerCircle, paintBackground);
+    canvas.clipRRect(
+        RRect.fromRectAndRadius(boundaries, Radius.circular(radius)));
+    canvas.restore();
+  }
+}
+
+class _CropRectPainter extends CustomPainter {
+  final ui.Image? image;
+  final Rect view;
+  final double ratio;
+  final Rect area;
+  final double scale;
+  final double active;
+  final Color backgroundColor;
+  final bool disableResize;
+  final double cropHandleSize;
+
+  _CropRectPainter({
+    required this.image,
+    required this.view,
+    required this.ratio,
+    required this.area,
+    required this.scale,
+    required this.active,
+    required this.backgroundColor,
+    required this.disableResize,
+    required this.cropHandleSize,
+  });
+
+  @override
+  bool shouldRepaint(_CropRectPainter oldDelegate) {
+    return oldDelegate.image != image ||
+        oldDelegate.view != view ||
+        oldDelegate.ratio != ratio ||
+        oldDelegate.area != area ||
+        oldDelegate.active != active ||
+        oldDelegate.scale != scale;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(
+      cropHandleSize / 2,
+      cropHandleSize / 2,
+      size.width - cropHandleSize,
+      size.height - cropHandleSize,
+    );
+
+    canvas.save();
+    canvas.translate(rect.left, rect.top);
+
+    final paint = Paint()..isAntiAlias = false;
+
+    final image = this.image;
+    if (image != null) {
+      final src = Rect.fromLTWH(
+        0.0,
+        0.0,
+        image.width.toDouble(),
+        image.height.toDouble(),
+      );
+      final dst = Rect.fromLTWH(
+        view.left * image.width * scale * ratio,
+        view.top * image.height * scale * ratio,
+        image.width * scale * ratio,
+        image.height * scale * ratio,
+      );
+
+      canvas.save();
+      canvas.clipRect(Rect.fromLTWH(0.0, 0.0, rect.width, rect.height));
+      canvas.drawImageRect(image, src, dst, paint);
+      canvas.restore();
+    }
+
+    paint.color = backgroundColor.withOpacity(
+        _kCropOverlayActiveOpacity * active +
+            backgroundColor.opacity * (1.0 - active));
+    final boundaries = Rect.fromLTWH(
+      rect.width * area.left,
+      rect.height * area.top,
+      rect.width * area.width,
+      rect.height * area.height,
+    );
+
+    if (boundaries.isEmpty == false) {
+      _drawGrid(canvas, boundaries, rect);
+      _drawHandles(canvas, boundaries, rect);
+    }
+
+    canvas.restore();
+  }
+
+  void _drawHandles(Canvas canvas, Rect boundaries, Rect rect) {
+    final paint = Paint()
+      ..isAntiAlias = true
+      ..color = _kCropHandleColor;
+
+    // do not show handles if cannot be resized
+    if (disableResize) return;
+
+    canvas.drawOval(
+      Rect.fromLTWH(
+        boundaries.left - cropHandleSize / 2,
+        boundaries.top - cropHandleSize / 2,
+        cropHandleSize,
+        cropHandleSize,
+      ),
+      paint,
+    );
+
+    canvas.drawOval(
+      Rect.fromLTWH(
+        boundaries.right - cropHandleSize / 2,
+        boundaries.top - cropHandleSize / 2,
+        cropHandleSize,
+        cropHandleSize,
+      ),
+      paint,
+    );
+
+    canvas.drawOval(
+      Rect.fromLTWH(
+        boundaries.right - cropHandleSize / 2,
+        boundaries.bottom - cropHandleSize / 2,
+        cropHandleSize,
+        cropHandleSize,
+      ),
+      paint,
+    );
+
+    canvas.drawOval(
+      Rect.fromLTWH(
+        boundaries.left - cropHandleSize / 2,
+        boundaries.bottom - cropHandleSize / 2,
+        cropHandleSize,
+        cropHandleSize,
+      ),
+      paint,
+    );
+  }
+
+  void _drawGrid(Canvas canvas, Rect boundaries, Rect rect) {
+    if (active == 0.0) return;
+    final paintBackground = Paint()
+      ..color = backgroundColor.withOpacity(
+          _kCropOverlayActiveOpacity * active +
+              backgroundColor.opacity * (1.0 - active));
+    final paint = Paint()
+      ..isAntiAlias = false
+      ..color = _kCropGridColor.withOpacity(_kCropGridColor.opacity * active)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    final path = Path()
+        ..moveTo(boundaries.left, boundaries.top)
+        ..lineTo(boundaries.right, boundaries.top)
+        ..lineTo(boundaries.right, boundaries.bottom)
+        ..lineTo(boundaries.left, boundaries.bottom)
+        ..lineTo(boundaries.left, boundaries.top)
+        ..fillType = PathFillType.evenOdd;
+
+      for (var column = 1; column < _kCropGridColumnCount; column++) {
+        path
+          ..moveTo(
+              boundaries.left +
+                  column * boundaries.width / _kCropGridColumnCount,
+              boundaries.top)
+          ..lineTo(
+              boundaries.left +
+                  column * boundaries.width / _kCropGridColumnCount,
+              boundaries.bottom);
+      }
+
+      for (var row = 1; row < _kCropGridRowCount; row++) {
+        path
+          ..moveTo(boundaries.left,
+              boundaries.top + row * boundaries.height / _kCropGridRowCount)
+          ..lineTo(boundaries.right,
+              boundaries.top + row * boundaries.height / _kCropGridRowCount);
+      }
+
+      canvas.save();
+      canvas.clipRect(boundaries, clipOp: ui.ClipOp.difference);
+      canvas.drawRect(
+        rect,
+        paintBackground,
+      );
+      canvas.restore();
+      canvas.drawPath(path, paint);
   }
 }
