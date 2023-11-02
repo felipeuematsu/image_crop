@@ -64,6 +64,9 @@ class Crop extends StatefulWidget {
   /// Show or not the grid
   final bool isToDrawGrid;
 
+  /// Flag to apply or not the background opacity
+  final bool isToApplyBackgroundOpacity;
+
   const Crop({
     Key? key,
     required this.image,
@@ -79,6 +82,7 @@ class Crop extends StatefulWidget {
     this.isToDrawRectGrid = true,
     this.customPainter,
     this.isToDrawGrid = true,
+    this.isToApplyBackgroundOpacity = true,
   }) : super(key: key);
 
   Crop.file(
@@ -97,6 +101,7 @@ class Crop extends StatefulWidget {
     this.isToDrawRectGrid = true,
     this.customPainter,
     this.isToDrawGrid = true,
+    this.isToApplyBackgroundOpacity = true,
   })  : image = FileImage(file, scale: scale),
         super(key: key);
 
@@ -117,6 +122,7 @@ class Crop extends StatefulWidget {
     this.isToDrawRectGrid = true,
     this.customPainter,
     this.isToDrawGrid = true,
+    this.isToApplyBackgroundOpacity = true,
   })  : image = AssetImage(assetName, bundle: bundle, package: package),
         super(key: key);
 
@@ -287,6 +293,8 @@ class CropState extends State<Crop> with TickerProviderStateMixin {
                                 disableResize: widget.disableResize,
                                 cropHandleSize: cropHandleSize,
                                 showGrid: widget.isToDrawGrid,
+                                applyOpacityToBackground:
+                                    widget.isToApplyBackgroundOpacity,
                               )
                             : _CropCirclePainter(
                                 image: _image,
@@ -299,6 +307,8 @@ class CropState extends State<Crop> with TickerProviderStateMixin {
                                 disableResize: widget.disableResize,
                                 cropHandleSize: cropHandleSize,
                                 showGrid: widget.isToDrawGrid,
+                                applyOpacityToBackground:
+                                    widget.isToApplyBackgroundOpacity,
                               )),
                   ),
           ),
@@ -783,6 +793,7 @@ abstract class CropCustomPainter extends CustomPainter {
   final double active;
   final double cropHandleSize;
   final bool showGrid;
+  final bool applyOpacityToBackground;
 
   const CropCustomPainter({
     required this.image,
@@ -795,7 +806,15 @@ abstract class CropCustomPainter extends CustomPainter {
     required this.active,
     required this.cropHandleSize,
     this.showGrid = true,
+    this.applyOpacityToBackground = true,
   });
+
+  Color get background => applyOpacityToBackground
+      ? backgroundColor.withOpacity(
+          _kCropOverlayActiveOpacity * active +
+              backgroundColor.opacity * (1.0 - active),
+        )
+      : backgroundColor;
 }
 
 class _CropCirclePainter extends CropCustomPainter {
@@ -810,6 +829,7 @@ class _CropCirclePainter extends CropCustomPainter {
     required super.disableResize,
     required super.cropHandleSize,
     super.showGrid = true,
+    super.applyOpacityToBackground = true,
   });
 
   @override
@@ -926,10 +946,8 @@ class _CropCirclePainter extends CropCustomPainter {
 
   void _drawGrid(Canvas canvas, Rect boundaries, Rect rect) {
     if (active == 0.0) return;
-    final paintBackground = Paint()
-      ..color = backgroundColor.withOpacity(
-          _kCropOverlayActiveOpacity * active +
-              backgroundColor.opacity * (1.0 - active));
+    final paintBackground = Paint()..color = background;
+
     final paint = Paint()
       ..isAntiAlias = false
       ..color = _kCropGridColor.withOpacity(_kCropGridColor.opacity * active)
@@ -1001,6 +1019,7 @@ class _CropRectPainter extends CropCustomPainter {
     required super.active,
     required super.cropHandleSize,
     super.showGrid = true,
+    super.applyOpacityToBackground = true,
   });
 
   @override
@@ -1117,10 +1136,8 @@ class _CropRectPainter extends CropCustomPainter {
 
   void _drawGrid(Canvas canvas, Rect boundaries, Rect rect) {
     if (active == 0.0) return;
-    final paintBackground = Paint()
-      ..color = backgroundColor.withOpacity(
-          _kCropOverlayActiveOpacity * active +
-              backgroundColor.opacity * (1.0 - active));
+    final paintBackground = Paint()..color = background;
+
     final paint = Paint()
       ..isAntiAlias = false
       ..color = _kCropGridColor.withOpacity(_kCropGridColor.opacity * active)
