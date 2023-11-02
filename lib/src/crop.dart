@@ -61,6 +61,9 @@ class Crop extends StatefulWidget {
   /// Custom Painter for drawing the crop area
   final CropCustomPainter? customPainter;
 
+  /// Show or not the grid
+  final bool isToDrawGrid;
+
   const Crop({
     Key? key,
     required this.image,
@@ -75,6 +78,7 @@ class Crop extends StatefulWidget {
     this.initialParam,
     this.isToDrawRectGrid = true,
     this.customPainter,
+    this.isToDrawGrid = true,
   }) : super(key: key);
 
   Crop.file(
@@ -92,6 +96,7 @@ class Crop extends StatefulWidget {
     this.initialParam,
     this.isToDrawRectGrid = true,
     this.customPainter,
+    this.isToDrawGrid = true,
   })  : image = FileImage(file, scale: scale),
         super(key: key);
 
@@ -111,6 +116,7 @@ class Crop extends StatefulWidget {
     this.initialParam,
     this.isToDrawRectGrid = true,
     this.customPainter,
+    this.isToDrawGrid = true,
   })  : image = AssetImage(assetName, bundle: bundle, package: package),
         super(key: key);
 
@@ -280,6 +286,7 @@ class CropState extends State<Crop> with TickerProviderStateMixin {
                                 backgroundColor: widget.backgroundColor,
                                 disableResize: widget.disableResize,
                                 cropHandleSize: cropHandleSize,
+                                showGrid: widget.isToDrawGrid,
                               )
                             : _CropCirclePainter(
                                 image: _image,
@@ -291,6 +298,7 @@ class CropState extends State<Crop> with TickerProviderStateMixin {
                                 backgroundColor: widget.backgroundColor,
                                 disableResize: widget.disableResize,
                                 cropHandleSize: cropHandleSize,
+                                showGrid: widget.isToDrawGrid,
                               )),
                   ),
           ),
@@ -774,6 +782,7 @@ abstract class CropCustomPainter extends CustomPainter {
   final double scale;
   final double active;
   final double cropHandleSize;
+  final bool showGrid;
 
   const CropCustomPainter({
     required this.image,
@@ -785,11 +794,11 @@ abstract class CropCustomPainter extends CustomPainter {
     required this.scale,
     required this.active,
     required this.cropHandleSize,
+    this.showGrid = true,
   });
 }
 
 class _CropCirclePainter extends CropCustomPainter {
-
   _CropCirclePainter({
     required super.image,
     required super.view,
@@ -800,6 +809,7 @@ class _CropCirclePainter extends CropCustomPainter {
     required super.backgroundColor,
     required super.disableResize,
     required super.cropHandleSize,
+    super.showGrid = true,
   });
 
   @override
@@ -928,22 +938,26 @@ class _CropCirclePainter extends CropCustomPainter {
 
     final path = Path();
 
-    for (var column = 1; column < _kCropGridColumnCount; column++) {
-      path
-        ..moveTo(
-            boundaries.left + column * boundaries.width / _kCropGridColumnCount,
-            boundaries.top)
-        ..lineTo(
-            boundaries.left + column * boundaries.width / _kCropGridColumnCount,
-            boundaries.bottom);
-    }
+    if (showGrid) {
+      for (var column = 1; column < _kCropGridColumnCount; column++) {
+        path
+          ..moveTo(
+              boundaries.left +
+                  column * boundaries.width / _kCropGridColumnCount,
+              boundaries.top)
+          ..lineTo(
+              boundaries.left +
+                  column * boundaries.width / _kCropGridColumnCount,
+              boundaries.bottom);
+      }
 
-    for (var row = 1; row < _kCropGridRowCount; row++) {
-      path
-        ..moveTo(boundaries.left,
-            boundaries.top + row * boundaries.height / _kCropGridRowCount)
-        ..lineTo(boundaries.right,
-            boundaries.top + row * boundaries.height / _kCropGridRowCount);
+      for (var row = 1; row < _kCropGridRowCount; row++) {
+        path
+          ..moveTo(boundaries.left,
+              boundaries.top + row * boundaries.height / _kCropGridRowCount)
+          ..lineTo(boundaries.right,
+              boundaries.top + row * boundaries.height / _kCropGridRowCount);
+      }
     }
 
     // Calc circle
@@ -976,17 +990,17 @@ class _CropCirclePainter extends CropCustomPainter {
 }
 
 class _CropRectPainter extends CropCustomPainter {
-
   _CropRectPainter({
     required super.image,
+    required super.disableResize,
+    required super.backgroundColor,
     required super.view,
     required super.ratio,
     required super.area,
     required super.scale,
     required super.active,
-    required super.backgroundColor,
-    required super.disableResize,
     required super.cropHandleSize,
+    super.showGrid = true,
   });
 
   @override
@@ -1121,22 +1135,26 @@ class _CropRectPainter extends CropCustomPainter {
       ..lineTo(boundaries.left, boundaries.top)
       ..fillType = PathFillType.evenOdd;
 
-    for (var column = 1; column < _kCropGridColumnCount; column++) {
-      path
-        ..moveTo(
-            boundaries.left + column * boundaries.width / _kCropGridColumnCount,
-            boundaries.top)
-        ..lineTo(
-            boundaries.left + column * boundaries.width / _kCropGridColumnCount,
-            boundaries.bottom);
-    }
+    if (showGrid) {
+      for (var column = 1; column < _kCropGridColumnCount; column++) {
+        path
+          ..moveTo(
+              boundaries.left +
+                  column * boundaries.width / _kCropGridColumnCount,
+              boundaries.top)
+          ..lineTo(
+              boundaries.left +
+                  column * boundaries.width / _kCropGridColumnCount,
+              boundaries.bottom);
+      }
 
-    for (var row = 1; row < _kCropGridRowCount; row++) {
-      path
-        ..moveTo(boundaries.left,
-            boundaries.top + row * boundaries.height / _kCropGridRowCount)
-        ..lineTo(boundaries.right,
-            boundaries.top + row * boundaries.height / _kCropGridRowCount);
+      for (var row = 1; row < _kCropGridRowCount; row++) {
+        path
+          ..moveTo(boundaries.left,
+              boundaries.top + row * boundaries.height / _kCropGridRowCount)
+          ..lineTo(boundaries.right,
+              boundaries.top + row * boundaries.height / _kCropGridRowCount);
+      }
     }
 
     canvas.save();
