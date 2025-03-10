@@ -1,3 +1,12 @@
+## 0.1.0
+
+- Replaced `ImageProvider` with `child` & `size` parameter [fork#3](https://github.com/LeGoffMael/image_crop/pull/3)
+- Allow any widget to be shown in the crop view
+
+## 0.0.3
+
+- Fix compatibility with AGP 8.0 [flutter/flutter#125621](https://github.com/flutter/flutter/issues/125621)
+
 ## 0.0.2
 
 - [#104](https://github.com/lykhonis/image_crop/pull/104): add to support to Flutter 3.10.x

@@ -1,16 +1,19 @@
 name: insta_assets_crop_example
 description: Demonstrates how to use the insta_assets_crop plugin.
-
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 version: 0.0.1+2
 
 environment:
-  sdk: '>=3.1.0 <4.0.0'
+  sdk: ^3.2.0
+  flutter: ">=3.16.0"
 
 dependencies:
   flutter:
     sdk: flutter
 
-  image_picker: ^0.7.4
+  image_picker: ^1.1.2
+  mime: ^1.0.5
+  video_player: ^2.9.1
 
 dev_dependencies:
   flutter_test:
